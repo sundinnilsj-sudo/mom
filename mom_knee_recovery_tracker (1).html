@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Your Knee Recovery Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f7f6f3;
+    --bg3: #eef7f3;
+    --text: #1a1a18;
+    --text2: #5e5e5a;
+    --border: rgba(0,0,0,0.13);
+    --border2: rgba(0,0,0,0.22);
+    --green: #1D9E75;
+    --green-dk: #0F6E56;
+    --green-dkr: #085041;
+    --green-lt: #5DCAA5;
+    --green-bg: #E1F5EE;
+    --rose: #D4537E;
+    --rose-bg: #FBEAF0;
+    --r-md: 10px;
+    --r-lg: 14px;
+    --font: -apple-system, 'Helvetica Neue', Georgia, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18; --bg2: #242420; --bg3: #0a2e21;
+      --text: #f0efe8; --text2: #9a9a94;
+      --border: rgba(255,255,255,0.12); --border2: rgba(255,255,255,0.22);
+      --green-bg: #0a2e21; --green-dk: #5DCAA5; --green-dkr: #9FE1CB;
+      --rose-bg: #2e0a18; --rose: #ED93B1;
+    }
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 28px 18px 60px; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+
+  /* Setup screen */
+  .setup-screen { text-align: center; padding: 40px 20px; }
+  .setup-icon { font-size: 48px; margin-bottom: 16px; }
+  .setup-title { font-size: 26px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .setup-sub { font-size: 16px; color: var(--text2); line-height: 1.6; margin-bottom: 32px; }
+  .setup-card { background: var(--bg2); border-radius: var(--r-lg); padding: 24px; text-align: left; margin-bottom: 20px; }
+  .setup-card label { font-size: 15px; font-weight: 600; color: var(--text); display: block; margin-bottom: 10px; }
+  .setup-card input, .setup-card select {
+    width: 100%; padding: 12px 14px; border-radius: var(--r-md);
+    border: 1px solid var(--border2); font-size: 16px;
+    background: var(--bg); color: var(--text); appearance: none;
+  }
+  .setup-card input:focus, .setup-card select:focus { outline: none; border-color: var(--green); }
+  .setup-hint { font-size: 13px; color: var(--text2); margin-top: 8px; }
+  .day-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 8px; }
+  .day-pick-btn { padding: 16px 10px; border-radius: var(--r-md); border: 2px solid var(--border2); font-size: 16px; font-weight: 600; cursor: pointer; background: var(--bg); color: var(--text2); text-align: center; transition: all 0.15s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .day-pick-btn:hover { border-color: var(--green); color: var(--green); }
+  .day-pick-btn.selected { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+  .start-btn { width: 100%; padding: 18px; border-radius: var(--r-lg); border: none; background: var(--green); color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; margin-top: 8px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .start-btn:hover { opacity: 0.9; }
+  .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Main tracker */
+  .tracker { display: none; }
+  .tracker.show { display: block; }
+  .header { margin-bottom: 1.5rem; }
+  .greeting { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .subgreet { font-size: 14px; color: var(--text2); }
+  .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 8px; }
+  .streak-badge { font-size: 13px; color: var(--green-dk); background: var(--green-bg); padding: 6px 14px; border-radius: 100px; font-weight: 600; }
+
+  .affirmation { background: var(--green-bg); border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 1.5rem; border-left: 3px solid var(--green); font-size: 15px; color: var(--green-dkr); line-height: 1.5; font-style: italic; }
+
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .stat-card { background: var(--bg2); border-radius: var(--r-md); padding: 14px 10px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 700; color: var(--text); }
+  .stat-label { font-size: 11px; color: var(--text2); margin-top: 3px; line-height: 1.3; }
+
+  .day-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .day-tab { padding: 7px 14px; border-radius: var(--r-md); border: 1px solid var(--border2); font-size: 13px; cursor: pointer; background: var(--bg); color: var(--text2); transition: all 0.15s; }
+  .day-tab:hover { background: var(--bg2); }
+  .day-tab.active { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; }
+  .day-tab.complete { border-color: var(--green); color: var(--green); font-weight: 600; }
+
+  .progress-bar-wrap { background: var(--bg2); border-radius: 100px; height: 10px; overflow: hidden; margin-bottom: 5px; }
+  .progress-bar { height: 100%; background: var(--green); border-radius: 100px; transition: width 0.4s; }
+  .progress-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+
+  .benchmark-box { background: var(--bg2); border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 1.25rem; border-left: 3px solid var(--rose); }
+  .benchmark-title { font-size: 13px; font-weight: 700; color: var(--rose); margin-bottom: 4px; }
+  .benchmark-text { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+  .section { margin-bottom: 1.25rem; }
+  .section-label { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; padding-left: 2px; }
+  .item { display: flex; align-items: flex-start; gap: 12px; padding: 13px 15px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md); margin-bottom: 8px; cursor: pointer; transition: all 0.15s; user-select: none; }
+  .item:hover { border-color: var(--border2); background: var(--bg2); }
+  .item.checked { border-color: var(--green); background: var(--green-bg); }
+  .item.checked .item-text { color: var(--green-dk); text-decoration: line-through; text-decoration-color: var(--green-lt); }
+  .check-box { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--border2); flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .item.checked .check-box { background: var(--green); border-color: var(--green); }
+  .check-mark { width: 12px; height: 8px; display: none; }
+  .item.checked .check-mark { display: block; }
+  .item-text { font-size: 15px; color: var(--text); line-height: 1.4; font-weight: 500; }
+  .item-sub { font-size: 13px; color: var(--text2); margin-top: 3px; line-height: 1.4; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+  .checkin-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; }
+  .checkin-q { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+  .mood-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .mood-btn { padding: 9px 16px; border-radius: 100px; border: 1px solid var(--border2); font-size: 14px; cursor: pointer; background: var(--bg); color: var(--text2); transition: all 0.15s; }
+  .mood-btn:hover { background: var(--bg2); }
+  .mood-btn.selected { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; }
+  .rom-section { margin-top: 18px; }
+  .rom-q { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .rom-row { display: flex; align-items: center; gap: 12px; }
+  .rom-input { width: 100px; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--border2); font-size: 16px; background: var(--bg); color: var(--text); }
+  .rom-input:focus { outline: none; border-color: var(--green); }
+  .rom-unit { font-size: 14px; color: var(--text2); }
+  .rom-hint { font-size: 13px; color: var(--text2); margin-top: 8px; line-height: 1.5; }
+
+  .notes-section { margin-top: 18px; }
+  .notes-q { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .notes-input { width: 100%; padding: 10px 12px; border-radius: var(--r-md); border: 1px solid var(--border2); font-size: 14px; background: var(--bg); color: var(--text); resize: vertical; min-height: 70px; font-family: var(--font); line-height: 1.5; }
+  .notes-input:focus { outline: none; border-color: var(--green); }
+
+  .complete-banner { display: none; background: var(--green-bg); border: 1px solid var(--green-lt); border-radius: var(--r-lg); padding: 22px; text-align: center; margin-top: 1.5rem; }
+  .complete-banner.show { display: block; }
+  .complete-icon { font-size: 32px; margin-bottom: 8px; }
+  .complete-title { font-size: 18px; font-weight: 700; color: var(--green-dkr); margin-bottom: 6px; }
+  .complete-sub { font-size: 14px; color: var(--green-dk); line-height: 1.5; }
+
+  .reset-link { text-align: center; margin-top: 2.5rem; }
+  .reset-btn { font-size: 13px; color: var(--text2); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SETUP SCREEN -->
+  <div class="setup-screen" id="setup-screen">
+    <div class="setup-icon">🌿</div>
+    <div class="setup-title">Your Recovery Tracker</div>
+    <div class="setup-sub">Let's set this up just for you.<br/>It only takes a moment.</div>
+
+    <div class="setup-card">
+      <label for="name-input">What's your first name?</label>
+      <input type="text" id="name-input" placeholder="e.g. Carol" maxlength="30" oninput="checkSetup()"/>
+    </div>
+
+    <div class="setup-card">
+      <label>What day of recovery are you on today?</label>
+      <div class="day-picker" id="day-picker">
+        <button class="day-pick-btn" data-day="8" onclick="pickDay(8)">Day 8</button>
+        <button class="day-pick-btn" data-day="9" onclick="pickDay(9)">Day 9</button>
+        <button class="day-pick-btn" data-day="10" onclick="pickDay(10)">Day 10</button>
+        <button class="day-pick-btn" data-day="11" onclick="pickDay(11)">Day 11</button>
+        <button class="day-pick-btn" data-day="12" onclick="pickDay(12)">Day 12</button>
+        <button class="day-pick-btn" data-day="13" onclick="pickDay(13)">Day 13</button>
+        <button class="day-pick-btn" data-day="14" onclick="pickDay(14)">Day 14</button>
+        <button class="day-pick-btn" data-day="15" onclick="pickDay(15)">Day 15+</button>
+      </div>
+      <div class="setup-hint">This helps us show the right goals and encouragement for where you are.</div>
+    </div>
+
+    <button class="start-btn" id="start-btn" disabled onclick="startTracker()">Let's get started →</button>
+  </div>
+
+  <!-- MAIN TRACKER -->
+  <div class="tracker" id="tracker">
+    <div class="header">
+      <div class="top-row">
+        <div>
+          <div class="greeting" id="greeting">Good morning!</div>
+          <div class="subgreet" id="subgreet">Keep going — you're doing great.</div>
+        </div>
+        <div class="streak-badge">🔥 <span id="streak-count">0</span> day streak</div>
+      </div>
+    </div>
+
+    <div class="affirmation" id="affirmation"></div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num" id="total-done">0</div><div class="stat-label">Tasks done today</div></div>
+      <div class="stat-card"><div class="stat-num" id="week-pct">0%</div><div class="stat-label">This week</div></div>
+      <div class="stat-card"><div class="stat-num" id="rom-display">—</div><div class="stat-label">Today's bend°</div></div>
+    </div>
+
+    <div class="day-tabs" id="day-tabs"></div>
+
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+    <div class="progress-row"><span id="progress-text">0 of 0 complete</span><span id="progress-pct">0%</span></div>
+
+    <div id="benchmark-area"></div>
+
+    <div class="section"><div class="section-label">☀️ Morning</div><div id="morning-items"></div></div>
+    <div class="section"><div class="section-label">🌤 Midday</div><div id="midday-items"></div></div>
+    <div class="section"><div class="section-label">🌙 Evening</div><div id="evening-items"></div></div>
+
+    <hr class="divider"/>
+
+    <div class="section">
+      <div class="section-label">💬 Daily check-in</div>
+      <div class="checkin-card">
+        <div class="checkin-q">How are you feeling today?</div>
+        <div class="mood-row">
+          <button class="mood-btn" onclick="setMood('wonderful')">Wonderful 😊</button>
+          <button class="mood-btn" onclick="setMood('good')">Good 🙂</button>
+          <button class="mood-btn" onclick="setMood('okay')">Okay 😐</button>
+          <button class="mood-btn" onclick="setMood('tough')">Tough day 😔</button>
+        </div>
+
+        <div class="rom-section">
+          <div class="rom-q">How far can you bend your knee today?</div>
+          <div class="rom-row">
+            <input class="rom-input" type="number" id="rom-input" placeholder="e.g. 85" min="0" max="150" oninput="saveROM()"/>
+            <span class="rom-unit">degrees</span>
+          </div>
+          <div class="rom-hint">Your physical therapist can measure this. Goal is 90° by end of week 3, and 120° by week 6. Every degree counts — you're building toward full freedom of movement!</div>
+        </div>
+
+        <div class="notes-section">
+          <div class="notes-q">Any notes for today? (pain, wins, questions for PT)</div>
+          <textarea class="notes-input" id="notes-input" placeholder="e.g. Left side felt tight after walk. PT said range improved. Slept better last night..." oninput="saveNotes()"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="complete-banner" id="complete-banner">
+      <div class="complete-icon">🎉</div>
+      <div class="complete-title">You did it — day complete!</div>
+      <div class="complete-sub" id="complete-msg">Every single task checked off. That dedication is exactly what heals you. Rest well tonight — tomorrow you do it again!</div>
+    </div>
+
+    <div class="reset-link">
+      <button class="reset-btn" onclick="resetAll()">Reset / start over</button>
+    </div>
+  </div>
+
+</div>
+<script>
+const DAYS = 14;
+const affirmations = [
+  "Healing takes courage. You have plenty of it.",
+  "Every step today is a step toward independence. Keep going.",
+  "Your body is doing remarkable work right now — support it with everything you've got.",
+  "Progress isn't always visible, but it's always happening. Trust the process.",
+  "You've already made it this far. That's not luck — that's strength.",
+  "Rest is part of recovery. So is movement. You're finding the balance.",
+  "Small wins add up to big ones. Check off each task with pride.",
+  "You're building a stronger, healthier you — one day at a time.",
+  "Think of your good days ahead — walks, stairs, independence. That's what today is for.",
+  "Pain is temporary. The strength you're building is permanent.",
+  "Every ice pack, every rep, every protein shake — it all adds up.",
+  "You are doing something hard and doing it well.",
+  "This is the hardest part. It gets easier from here.",
+  "Your recovery is a gift you're giving your future self.",
+];
+const benchmarks = [
+  "Days 8–14: Focus on gentle movement and ice. Goal is 90° bend by end of week 2. You're right on track — this early work matters most.",
+  "Week 3: Aim for 90–100° bend. Try reducing walker or cane use indoors. Stairs with one hand on the rail.",
+  "Week 4: Target 100–110° bend. Short walks without aid indoors. Swelling should be easing up.",
+  "Week 6: 110–120° bend. You should be resuming many light daily activities. PT visits may start reducing.",
+  "Week 8: 120°+ bend. Near-normal walking. Begin gentle strengthening exercises with PT guidance.",
+  "Week 10: Full daily independence for most activities. Gradual return to hobbies and light exercise.",
+  "Week 12: 3-month milestone! Most people are at 90%+ normal function. Celebrate how far you've come.",
+  "Week 14: Continuing to strengthen. The new knee is becoming your knee.",
+];
+const schedule = {
+  morning: [
+    {id:"m1", text:"Take your medications and supplements", sub:"With a full glass of water and a little food 💊"},
+    {id:"m2", text:"Ankle pumps & heel slides in bed", sub:"3 sets of 10 — do these before you even get up"},
+    {id:"m3", text:"Visualization — 10 minutes", sub:"Close your eyes, breathe slowly, and imagine your knee moving freely and pain-free"},
+    {id:"m4", text:"Protein-rich breakfast", sub:"Eggs, Greek yogurt, or cottage cheese — your body needs protein to heal 🍳"},
+    {id:"m5", text:"Short morning walk (5–10 minutes)", sub:"Slow and steady, focusing on heel-to-toe steps"},
+    {id:"m6", text:"Ice the knee for 15–20 minutes", sub:"After your walk — reduces swelling and feels wonderful ❄️"},
+  ],
+  midday: [
+    {id:"d1", text:"PT session or home exercise routine", sub:"3x/week with your PT — do your home routine on the other days"},
+    {id:"d2", text:"Protein-rich lunch", sub:"Chicken, fish, legumes — keep those building blocks coming 🥗"},
+    {id:"d3", text:"Recovery drink within 30 min of exercise", sub:"Chocolate milk, Fairlife, or a protein shake — you've earned it! 🍫"},
+    {id:"d4", text:"Ice + elevate after PT or exercises", sub:"15–20 minutes with leg raised above your heart"},
+    {id:"d5", text:"A gentle midday walk or movement break", sub:"Even 5 minutes helps — don't sit for more than 1–2 hours at a stretch"},
+    {id:"d6", text:"10 minutes of calm breathing or music", sub:"Box breathing (4 counts in, hold, out, hold) or your favorite playlist 🎵"},
+  ],
+  evening: [
+    {id:"e1", text:"Quad sets & straight leg raises", sub:"3 sets of 10–15 — these build the muscles protecting your new knee 💪"},
+    {id:"e2", text:"Final ice session — 15–20 minutes", sub:"This one helps you sleep better and reduces overnight swelling"},
+    {id:"e3", text:"Protein-rich dinner", sub:"Salmon, chicken, eggs — aim for 30g+ of protein at dinner 🍽️"},
+    {id:"e4", text:"Log your bend angle and mood below", sub:"Tracking is motivating — you'll love seeing the progress over weeks"},
+    {id:"e5", text:"Elevate your leg while relaxing", sub:"Feet above heart while watching TV or reading 📺"},
+    {id:"e6", text:"In bed by 10pm", sub:"Deep sleep is when healing happens most — it's not a luxury, it's medicine 😴"},
+  ]
+};
+
+let userName = '';
+let startDay = 8;
+let pickedDay = null;
+let state = {};
+try { state = JSON.parse(localStorage.getItem('momKneeRecovery') || '{}'); } catch(e) {}
+if (!state.days) state.days = {};
+if (state.userName) { userName = state.userName; startDay = state.startDay || 8; }
+let currentDay = 0;
+
+function pickDay(d) {
+  pickedDay = d;
+  document.querySelectorAll('.day-pick-btn').forEach(b => b.classList.toggle('selected', parseInt(b.dataset.day) === d));
+  checkSetup();
+}
+function checkSetup() {
+  const name = document.getElementById('name-input').value.trim();
+  document.getElementById('start-btn').disabled = !(name && pickedDay);
+}
+function startTracker() {
+  userName = document.getElementById('name-input').value.trim();
+  startDay = pickedDay;
+  state.userName = userName;
+  state.startDay = startDay;
+  save();
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('tracker').classList.add('show');
+  renderAll();
+}
+function resetAll() {
+  if (confirm('Reset all progress and start over?')) {
+    localStorage.removeItem('momKneeRecovery');
+    location.reload();
+  }
+}
+
+// Auto-show tracker if already set up
+if (state.userName) {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('tracker').classList.add('show');
+  if (state.startDay) startDay = state.startDay;
+}
+
+function dayKey(d) { return 'day' + d; }
+function getDay(d) {
+  if (!state.days[dayKey(d)]) state.days[dayKey(d)] = {checked:{}, mood:'', rom:'', notes:''};
+  return state.days[dayKey(d)];
+}
+function save() { try { localStorage.setItem('momKneeRecovery', JSON.stringify(state)); } catch(e) {} }
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function renderHeader() {
+  const name = state.userName || userName;
+  document.getElementById('greeting').textContent = getGreeting() + (name ? ', ' + name + '!' : '!');
+  const dayNum = startDay + currentDay;
+  document.getElementById('subgreet').textContent = `Day ${dayNum} of your recovery — you're doing this! 💚`;
+  const aff = affirmations[(currentDay + startDay) % affirmations.length];
+  document.getElementById('affirmation').textContent = '"' + aff + '"';
+}
+
+function renderTabs() {
+  const el = document.getElementById('day-tabs');
+  el.innerHTML = '';
+  const labels = ['Day 1','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7','Day 8','Day 9','Day 10','Day 11','Day 12','Day 13','Day 14'];
+  for (let i = 0; i < DAYS; i++) {
+    const d = getDay(i);
+    const all = [...schedule.morning, ...schedule.midday, ...schedule.evening];
+    const done = all.filter(x => d.checked[x.id]).length;
+    const pct = Math.round(done / all.length * 100);
+    const tab = document.createElement('div');
+    tab.className = 'day-tab' + (i === currentDay ? ' active' : pct === 100 ? ' complete' : '');
+    tab.textContent = 'Day ' + (startDay + i);
+    tab.onclick = () => { currentDay = i; renderAll(); };
+    el.appendChild(tab);
+  }
+}
+
+function renderBenchmark() {
+  const el = document.getElementById('benchmark-area');
+  const idx = Math.min(currentDay, benchmarks.length - 1);
+  const dayNum = startDay + currentDay;
+  el.innerHTML = `<div class="benchmark-box"><div class="benchmark-title">🎯 Your goal — Day ${dayNum}</div><div class="benchmark-text">${benchmarks[idx]}</div></div>`;
+}
+
+function renderSection(items, containerId) {
+  const el = document.getElementById(containerId);
+  const d = getDay(currentDay);
+  el.innerHTML = '';
+  items.forEach(item => {
+    const checked = !!d.checked[item.id];
+    const div = document.createElement('div');
+    div.className = 'item' + (checked ? ' checked' : '');
+    div.onclick = () => toggle(item.id);
+    div.innerHTML = `<div class="check-box"><svg class="check-mark" viewBox="0 0 12 9" fill="none"><path d="M1 4L4.5 7.5L11 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><div class="item-text">${item.text}</div>${item.sub ? `<div class="item-sub">${item.sub}</div>` : ''}</div>`;
+    el.appendChild(div);
+  });
+}
+
+function toggle(id) {
+  const d = getDay(currentDay);
+  d.checked[id] = !d.checked[id];
+  save();
+  renderAll();
+}
+
+function setMood(m) {
+  getDay(currentDay).mood = m;
+  save();
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    const val = b.textContent.toLowerCase().split(' ')[0];
+    b.classList.toggle('selected', val === m || b.textContent.toLowerCase().includes(m));
+  });
+}
+
+function saveROM() {
+  const v = document.getElementById('rom-input').value;
+  getDay(currentDay).rom = v;
+  document.getElementById('rom-display').textContent = v ? v + '°' : '—';
+  save();
+}
+
+function saveNotes() {
+  const v = document.getElementById('notes-input').value;
+  getDay(currentDay).notes = v;
+  save();
+}
+
+function renderProgress() {
+  const all = [...schedule.morning, ...schedule.midday, ...schedule.evening];
+  const d = getDay(currentDay);
+  const done = all.filter(x => d.checked[x.id]).length;
+  const pct = Math.round(done / all.length * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done} of ${all.length} tasks complete`;
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('total-done').textContent = done;
+  const banner = document.getElementById('complete-banner');
+  const name = state.userName || userName;
+  document.getElementById('complete-msg').textContent = `Every single task checked off${name ? ', ' + name : ''}. That dedication is exactly what heals you. Rest well tonight — tomorrow you do it again!`;
+  banner.className = 'complete-banner' + (done === all.length ? ' show' : '');
+}
+
+function renderWeekStat() {
+  const all = [...schedule.morning, ...schedule.midday, ...schedule.evening];
+  let done = 0, possible = 0;
+  for (let i = 0; i < 7; i++) { const d = getDay(i); done += all.filter(x => d.checked[x.id]).length; possible += all.length; }
+  document.getElementById('week-pct').textContent = Math.round(done / possible * 100) + '%';
+}
+
+function renderStreak() {
+  const all = [...schedule.morning, ...schedule.midday, ...schedule.evening];
+  let streak = 0;
+  for (let i = 0; i < DAYS; i++) {
+    if (all.filter(x => getDay(i).checked[x.id]).length === all.length) streak++;
+    else break;
+  }
+  document.getElementById('streak-count').textContent = streak;
+}
+
+function renderCheckin() {
+  const d = getDay(currentDay);
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.classList.toggle('selected', b.textContent.toLowerCase().includes(d.mood) && d.mood !== '');
+  });
+  document.getElementById('rom-input').value = d.rom || '';
+  document.getElementById('rom-display').textContent = d.rom ? d.rom + '°' : '—';
+  document.getElementById('notes-input').value = d.notes || '';
+}
+
+function renderAll() {
+  if (!(state.userName || userName)) return;
+  renderHeader();
+  renderTabs();
+  renderBenchmark();
+  renderSection(schedule.morning, 'morning-items');
+  renderSection(schedule.midday, 'midday-items');
+  renderSection(schedule.evening, 'evening-items');
+  renderProgress();
+  renderWeekStat();
+  renderStreak();
+  renderCheckin();
+}
+
+if (state.userName) renderAll();
+</script>
+</body>
+</html>
